@@ -1,0 +1,87 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+// Looking for ways to speed up your queries, or scale easily with your serverless or edge functions?
+// Try Prisma Accelerate: https://pris.ly/cli/accelerate-init
+
+generator client {
+  provider = "prisma-client-js"
+  output   = "../src/generated/prisma"
+}
+
+datasource db {
+  provider = "mysql"
+}
+
+enum Role {
+  USER
+  ADMIN
+}
+
+enum OrderStatus {
+  PENDING // รอดำเนินการ
+  PAID // จ่ายเงินแล้ว
+  SHIPPED // จัดส่งแล้ว
+  CANCELLED // ยกเลิก
+}
+
+enum ListingStatus {
+  AVAILABLE // มีของ
+  PENDING // จองแล้ว
+  SOLD // ขายแล้ว
+  HIDDEN // ปิดการขายชั่วคราว
+}
+
+model User {
+  id       Int       @id @default(autoincrement())
+  username String    @unique
+  email    String    @unique
+  password String
+  role     Role      @default(USER)
+  listings Listing[] @relation("Seller")
+  orders   Order[]   @relation("Buyer")
+}
+
+model Card {
+  id       String    @id //  เลขรหัสการ์ด "OP05-119"
+  name     String
+  rarity   String
+  color    String
+  image    String?
+  listings Listing[]
+}
+
+model Listing {
+  id             Int           @id @default(autoincrement())
+  price          Float
+  status         ListingStatus @default(AVAILABLE)
+  image          String?
+  graded         Boolean       @default(false)
+  gradingCompany String?
+  gradeScore     Float?
+  certNumber     String?
+  seller         User          @relation("Seller", fields: [sellerId], references: [id])
+  sellerId       Int
+  card           Card          @relation(fields: [cardId], references: [id])
+  cardId         String
+  orderItems     OrderItem[]
+}
+
+model Order {
+  id        Int         @id @default(autoincrement())
+  status    OrderStatus @default(PENDING)
+  total     Float // ราคารวมทั้งหมด ถ้าซื้อหลายออเดอร์
+  buyer     User        @relation("Buyer", fields: [buyerId], references: [id])
+  buyerId   Int
+  createdAt DateTime    @default(now())
+  items     OrderItem[]
+}
+
+model OrderItem {
+  id        Int     @id @default(autoincrement())
+  order     Order   @relation(fields: [orderId], references: [id])
+  orderId   Int
+  listing   Listing @relation(fields: [listingId], references: [id])
+  listingId Int
+  soldPrice Float // ราคาปัจจุบันที่ซื้อ
+}
